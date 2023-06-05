@@ -18,7 +18,9 @@ window.onTelegramAuth = async (data) => {
 }
 
 ;(async function main() {
-    if (!isMobile()) return
+    let is_dev = false
+    {const rq=await fetch('/api/isdev',{headers:{authorization:`Bearer ${localStorage.getItem('auth')}`}});const rs=await rq.json();is_dev=rs.s}
+    if (!is_dev && !isMobile()) return
     initSettings() // это создает настройки
     let is_dark = getSettings('theme') == 'auto'
         ? matchMedia('(prefers-color-scheme: dark)').matches
@@ -593,8 +595,8 @@ window.onTelegramAuth = async (data) => {
     })
 
     $('#ops').on('click', async () => {
+        if (!$('.inventory').hasClass('hidden')) return $('.inventory').addClass('hidden')
         $('#ops').prop('disabled', true)
-
         const { response } = await apiQuery('inventory').catch(({ toast }) => apiCatch(toast))
         $('#ops').prop('disabled', false)
         if (!response) return
@@ -785,6 +787,7 @@ window.onTelegramAuth = async (data) => {
         makeScore(cache)
     })();
     $('#score').on('click', async () => {
+        if (!$('.score').hasClass('hidden')) return $('.score').addClass('hidden')
         $('#score').prop('disabled', true)
         const { response } = await apiQuery('score').catch(({ toast }) => apiCatch(toast))
         $('#score').prop('disabled', false)
@@ -808,7 +811,10 @@ window.onTelegramAuth = async (data) => {
         })
         container.on('change', drawLeaderboard)
     })();
-    $('#leaderboard').on('click', drawLeaderboard)
+    $('#leaderboard').on('click', () => {
+        if (!$('.leaderboard').hasClass('hidden')) return $('.leaderboard').addClass('hidden')
+        drawLeaderboard()
+    })
     $('.outer-link').on('click', confirmOuter)
 
     $('#attack-menu').on('click', async () => {
