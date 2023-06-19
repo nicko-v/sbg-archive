@@ -18,9 +18,7 @@ window.onTelegramAuth = async (data) => {
 }
 
 ;(async function main() {
-    let is_dev = false
-    {const rq=await fetch('/api/isdev',{headers:{authorization:`Bearer ${localStorage.getItem('auth')}`}});const rs=await rq.json();is_dev=rs.s}
-    if (!is_dev && !isMobile()) return
+    if (!isMobile()) return
     initSettings() // это создает настройки
     let is_dark = getSettings('theme') == 'auto'
         ? matchMedia('(prefers-color-scheme: dark)').matches
