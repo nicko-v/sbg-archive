@@ -496,6 +496,7 @@
 {
   // REQUEST:
   params == '?guid=000000000000.28d'
+  params == '?name=Nickname'
 
   // RESPONSE:
   body == {
