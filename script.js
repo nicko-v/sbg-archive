@@ -19,7 +19,7 @@ window.onTelegramAuth = async (data) => {
 
   ; (async function main() {
     const is_mobile = isMobile()
-    // if (!is_mobile) return
+    if (!is_mobile) return
 
     const Packages = [
       'jQuery', 'OpenLayers',
@@ -64,7 +64,7 @@ window.onTelegramAuth = async (data) => {
       fallbackLng: META.fallbacks,
       backend: {
         backends: [i18nextLocalStorageBackend, i18nextHttpBackend],
-        backendOptions: [{ prefix: 'i18next_' }, { loadPath: '/i18n/{{lng}}/main.json' }]
+        backendOptions: [{ prefix: 'i18next_' }, { loadPath: '/i18n/{{lng}}/main.json?_t=1' }]
       },
       defaultNs: 'main',
       ns: ['main'],
@@ -132,14 +132,27 @@ window.onTelegramAuth = async (data) => {
     updateSelfInfo()
     initSettings() // это применяет настройки
 
-    {
-      const { response } = await apiQuery('inventory').catch(({ toast }) => apiCatch(toast))
-      if (!response) return
-      localStorage.setItem('inventory-cache', JSON.stringify(response.i))
-      const total = response.i.map(m => m.a).reduce((acc, e) => acc += e, 0)
-      $('#self-info__inv').text(total)
-        .parent().css('color', total >= 3000 ? 'var(--accent)' : '')
-    }
+    apiQuery('inventory')
+      .catch(({ toast }) => apiCatch(toast))
+      .then(({ response }) => {
+        localStorage.setItem('inventory-cache', JSON.stringify(response.i))
+        const total = response.i.map(m => m.a).reduce((acc, e) => acc += e, 0)
+        $('#self-info__inv').text(total)
+          .parent().css('color', total >= 3000 ? 'var(--accent)' : '')
+      })
+
+    apiQuery('notifs', { latest: +localStorage.getItem('latest-notif') })
+      .catch(({ toast }) => apiCatch(toast))
+      .then(({ response }) => {
+        if (response.count > 0) $('#notifs-menu').attr('data-count', response.count)
+      })
+    setInterval(() => {
+      apiQuery('notifs', { latest: +localStorage.getItem('latest-notif') })
+        .catch(({ toast }) => apiCatch(toast))
+        .then(({ response }) => {
+          if (response.count > 0) $('#notifs-menu').attr('data-count', response.count)
+        })
+    }, 60e3)
 
     fetch('/icons/rarities.svg').then(r => r.text().then(xml => $('body').append(xml)))
 
@@ -254,6 +267,12 @@ window.onTelegramAuth = async (data) => {
       layers: [base_layer, regions_layer, lines_layer, temp_lines_layer, points_layer, player_layer],
       view
     })
+      // const ViewOffsets2 = {
+      //   _HALF: () => { const val = view.getResolution() * (map.viewport_.clientHeight / 2); console.log(val); return val },
+      //   NORMAL: () => ViewOffsets2._HALF() * 2/3,
+      //   CENTER: () => ViewOffsets2._HALF() * -1/20
+      // }
+      // view.setProperties({ offset: [0, ViewOffsets2.NORMAL()] })
 
       ; (function handleURLLinks() {
         const params = new URLSearchParams(location.search)
@@ -261,7 +280,6 @@ window.onTelegramAuth = async (data) => {
         if (params.has('point')) {
           const guid = params.get('point')
           if (!guid.match(/^[a-z\d]{12}\.22a$/)) return
-          // localStorage.setItem('follow', false)
           showInfo(guid)
         } else if (params.has('player')) {
           const query = params.get('player')
@@ -305,7 +323,6 @@ window.onTelegramAuth = async (data) => {
     let watcher
     if ('geolocation' in navigator) {
       watcher = navigator.geolocation.watchPosition(({ coords }) => {
-        //console.log(coords)
         // coords = { longitude: 37.9080643523613, latitude: 55.97469155253259 }
         movePlayer([coords.longitude, coords.latitude])
         $('#toggle-follow').attr('data-active', localStorage.getItem('follow') != 'false')
@@ -815,15 +832,6 @@ window.onTelegramAuth = async (data) => {
       })
     })
 
-      ; (function initScore() {
-        const fallback = [0, 0].fill({ r: 0, g: 0, b: 0 })
-        let cache = JSON.parse(localStorage.getItem('score'))
-        if (!(cache instanceof Array)) {
-          localStorage.setItem('score', JSON.stringify(fallback))
-          cache = fallback.slice()
-        }
-        makeScore(cache)
-      })();
     $('#score').on('click', async () => {
       if (!$('.score').hasClass('hidden')) return $('.score').addClass('hidden')
       $('#score').prop('disabled', true)
@@ -832,7 +840,7 @@ window.onTelegramAuth = async (data) => {
       if (!response) return
 
       $('.score').removeClass('hidden')
-      makeScore(response.score)
+      makeScore(response)
       setTimeout(updateTimers)
       timers.score = setInterval(updateTimers, 1000)
 
@@ -842,8 +850,13 @@ window.onTelegramAuth = async (data) => {
         const decay = new Date()
         check.setMinutes(check.getMinutes() + 60); check.setMinutes(0, 0, 0)
         if (now.getMinutes() >= 30) decay.setMinutes(decay.getMinutes() + 60); decay.setMinutes(30, 0, 0)
-        $('#timer-check').text(timeToHMS((check.getTime() - now.getTime()) / 1000, false))
+
+        const until_check = Math.floor((check.getTime() - now.getTime()) / 1000)
+        $('#timer-check').text(timeToHMS(until_check, false))
         $('#timer-decay').text(timeToHMS((decay.getTime() - now.getTime()) / 1000, false))
+
+        if (until_check == 3598)
+          apiQuery('score').catch(({ toast }) => apiCatch(toast)).then(({ response }) => makeScore(response))
       }
     })
       ; (function initLBSelect() {
@@ -1192,6 +1205,46 @@ window.onTelegramAuth = async (data) => {
       $('.settings').after(el)
     })
 
+    $('#notifs-menu').on('click', async () => {
+      $('#notifs-menu').prop('disabled', true)
+      const { response } = await apiQuery('notifs').catch(({ toast }) => apiCatch(toast))
+      $('#notifs-menu').prop('disabled', false).removeAttr('data-count')
+      if (typeof response === 'undefined') return
+
+      const latest = +localStorage.getItem('latest-notif')
+      $('.notifs').removeClass('hidden')
+      $('.notifs__list').empty()
+      if (!response.list.length) {
+        $('.notifs__list').append($('<div>', { text: i18next.t('notifs.empty') }).css({
+          'text-align': 'center',
+          'font-style': 'italic'
+        }))
+        return
+      }
+      response.list.forEach(entry => {
+        const date = new Date(entry.ti)
+        $('.notifs__list').append($('<div>', { class: `notifs__entry ${entry.id == latest ? 'latest' : ''}`, 'data-id': entry.id, 'data-target': entry.g })
+          .append($('<span>', { class: 'notifs__entry-stamp' })
+            .append($('<span>', { class: 'notifs__entry-time', text: date.toLocaleString(LANG, { hour: '2-digit', minute: '2-digit' }) }))
+            .append($('<span>', { class: 'notifs__entry-date', text: date.toLocaleString(LANG, { month: 'short', day: 'numeric' }) }))
+          )
+          .append($('<span>', { class: 'notifs__entry-title', text: entry.t }))
+          .append(jquerypassargs(
+            $('<span>', { class: 'notifs__entry-text' }),
+            i18next.t('notifs.text'),
+            $('<span>', { class: 'profile-link' }).text(entry.na).css('color', `var(--team-${entry.ta})`).attr('data-name', entry.na).on('click', openProfile)
+          ))
+          .append($('<button>', { class: 'notifs__entry-view icon-button' }).append($('<span>', { class: 'material-symbols-outlined', text: 'visibility' }))).on('click', () => {
+            $('#toggle-follow').attr('data-active', false)
+            localStorage.setItem('follow', false)
+            view.setCenter(ol.proj.fromLonLat(entry.c))
+            $('.notifs').addClass('hidden')
+          })
+        )
+      })
+      localStorage.setItem('latest-notif', response.list[0].id)
+    })
+
     $('#logout').on('click', async () => {
       const proof = confirm(i18next.t('popups.logout'))
       if (!proof) return
@@ -1257,7 +1310,7 @@ window.onTelegramAuth = async (data) => {
 
       const feature = points_source.getFeatureById(json.g)
       const team_color = `var(--team-${json.te})`
-      const percent_format = new Intl.NumberFormat(LANG, { maximumFractionDigits: 1 })
+      const percent_format = new Intl.NumberFormat('ru', { maximumFractionDigits: 1 })
 
       let eng = 0
       let eng_total = 0
@@ -1348,7 +1401,7 @@ window.onTelegramAuth = async (data) => {
     }
 
     function updateSelfInfo() {
-      const formatter = new Intl.NumberFormat(LANG)
+      const formatter = new Intl.NumberFormat('ru')
       const explv = Levels[self_data.l - 1]
       $('#self-info__name').text(self_data.n).css('color', `var(--team-${self_data.t})`)
       if (explv.target !== Infinity)
@@ -1365,7 +1418,7 @@ window.onTelegramAuth = async (data) => {
       manageDeploy()
       if (localStorage.getItem('follow') != 'false' || !start_follow) {
         view.setCenter(pos)
-        view.adjustCenter(view.getProperties().offset)
+        // view.adjustCenter(view.getProperties().offset)
       }
     }
     function manageControls(source) {
@@ -1373,9 +1426,8 @@ window.onTelegramAuth = async (data) => {
       const in_range = isInRange(source.c)
       $('#discover:not(.locked)').prop('disabled', !in_range)
       $('#repair:not(.locked)').prop('disabled', !((in_range || (!in_range && inventory.find(f => f.l === source.g))) && source.te == self_data.t && source.co.some(s => s.e < Cores[s.l].eng)))
-      const inbound = source.li?.i || point_state.lines_count?.i || 0
       const outbound = source.li?.o || point_state.lines_count?.o || 0
-      $('#draw:not(.locked)').prop('disabled', !(in_range && source.te == self_data.t && source.co.length >= 6 && inbound < 1100 && outbound < 20))
+      $('#draw:not(.locked)').prop('disabled', !(in_range && source.te == self_data.t && source.co.length >= 6 && outbound < 30))
     }
     function manageDeploy() {
       if ($('#info').hasClass('hidden')) return
@@ -1450,7 +1502,7 @@ window.onTelegramAuth = async (data) => {
 
       const pos = data.g[1].slice()
       view.setCenter(ol.proj.fromLonLat(pos))
-      view.adjustCenter(view.getProperties().offset)
+      // view.adjustCenter(view.getProperties().offset)
     }
     function closeDrawSlider() {
       $('.draw-slider-wrp').addClass('hidden')
@@ -1460,7 +1512,7 @@ window.onTelegramAuth = async (data) => {
       localStorage.setItem('follow', $('.draw-slider-wrp').attr('data-follow'))
       view.setProperties({ offset: [0, ViewOffsets.NORMAL] })
       view.setCenter(player_feature.getGeometry().getCoordinates())
-      view.adjustCenter(view.getProperties().offset)
+      // view.adjustCenter(view.getProperties().offset)
     }
     function showExpDiff(diff) {
       if (diff == 0) return
@@ -1545,7 +1597,7 @@ window.onTelegramAuth = async (data) => {
           return { response: null }
         })
         if (!response) return
-        data = response.data
+        const data = response.data
         cache[guid] = {
           te: data.te, co: data.co,
           e: data.e, l: data.l,
@@ -1571,7 +1623,7 @@ window.onTelegramAuth = async (data) => {
           i18next.t('inventory.reference.info', { owner: data.o ? i18next.t('inventory.reference.owner') : i18next.t('inventory.reference.owner-none') }),
           $('<span>').text(i18next.t('inventory.reference.level', { count: data.l })).css('color', `var(--level-${data.l})`),
           $('<span>', { class: 'profile-link' }).text(data.o).css('color', `var(--team-${data.te})`).attr('data-name', data.o).on('click', openProfile),
-          new Intl.NumberFormat(LANG, { maximumFractionDigits: 1 }).format(data.e),
+          new Intl.NumberFormat('ru', { maximumFractionDigits: 1 }).format(data.e),
           data.co,
           distanceToString(getDistance(data.c))
         )
@@ -1649,7 +1701,7 @@ window.onTelegramAuth = async (data) => {
 
       const level = Levels[response.data.level - 1]
       const team_color = `var(--team-${response.data.team})`
-      const formatter = new Intl.NumberFormat(LANG)
+      const formatter = new Intl.NumberFormat('ru')
       const unit_xp = i18next.t('units.pts-xp')
       $('.profile').removeClass('hidden')
       $('#pr-name').text(response.data.name)
@@ -1704,7 +1756,7 @@ window.onTelegramAuth = async (data) => {
       })
     }
     function formatStatValue(key, value) {
-      const formatter = new Intl.NumberFormat(LANG)
+      const formatter = new Intl.NumberFormat('ru')
       if (key.match(/^guard_/)) return i18next.t('units.n-days', { count: value })
       else if (key.match(/_area$|^max_region$/)) return areaToString(value)
       else if (key == 'max_line') return distanceToString(value)
@@ -1724,7 +1776,7 @@ window.onTelegramAuth = async (data) => {
       $('#leaderboard').prop('disabled', true)
       const stat = $('#leaderboard__term-select').val()
       const unit = units.find(f => f[0].test(stat))?.[1]
-      const formatter = new Intl.NumberFormat(LANG)
+      const formatter = new Intl.NumberFormat('ru')
       const { response } = await apiQuery('leaderboard', { stat }).catch(({ toast }) => apiCatch(toast))
       $('#leaderboard').prop('disabled', false)
       if (!response) return
@@ -1859,13 +1911,13 @@ window.onTelegramAuth = async (data) => {
       return ol.sphere.getLength(line)
     }
     function distanceToString(distance) {
-      if (distance < 1) return i18next.t('units.cm', { count: distance * 100 })
-      else if (distance < 1000) return i18next.t('units.m', { count: distance })
-      else return i18next.t('units.km', { count: distance / 1000 })
+      if (distance < 1) return i18next.t('units.cm', { count: distance * 100, lng: 'ru' })
+      else if (distance < 1000) return i18next.t('units.m', { count: distance, lng: 'ru' })
+      else return i18next.t('units.km', { count: distance / 1000, lng: 'ru' })
     }
     function areaToString(area) {
-      if (area < 1) return i18next.t('units.sqm', { count: area * 1e6 })
-      else return i18next.t('units.sqkm', { count: area })
+      if (area < 1) return i18next.t('units.sqm', { count: area * 1e6, lng: 'ru' })
+      else return i18next.t('units.sqkm', { count: area, lng: 'ru' })
     }
     // function areaToString(area) {
     //   if (area < 1e-4) return i18next.t('units.ar', { count: area * 1e4 })
@@ -1887,7 +1939,7 @@ window.onTelegramAuth = async (data) => {
     }
 
     function clearStorage() {
-      const persist = ['follow', 'score', 'map-config', 'settings', 'uniques', /^i18next_/]
+      const persist = ['follow', 'score', 'map-config', 'settings', 'uniques', 'latest-notif', /^i18next_/]
       for (const key in localStorage) {
         if (persist.find(f => f instanceof RegExp ? f.test(key) : f == key)) continue
         localStorage.removeItem(key)
@@ -1914,10 +1966,9 @@ window.onTelegramAuth = async (data) => {
       )
     }
     function makeScore(data) {
-      const cache = JSON.parse(localStorage.getItem('score'))
-      const f = new Intl.NumberFormat(LANG, { maximumFractionDigits: 3 })
-      const df = new Intl.NumberFormat(LANG, { signDisplay: 'exceptZero' })
-      data.forEach((e, n) => {
+      const f = new Intl.NumberFormat('ru', { maximumFractionDigits: 3 })
+      const df = new Intl.NumberFormat('ru', { signDisplay: 'exceptZero' })
+      data.score.forEach((e, n) => {
         const { r, g, b } = e
         const is_zero = r + g + b == 0
         $('.score__graph').eq(n).css({
@@ -1926,13 +1977,12 @@ window.onTelegramAuth = async (data) => {
           '--b': is_zero ? 1 : b
         })
         for (const team in e) {
-          const diff = e[team] - cache[n][team]
+          const diff = data.diffs[n][team]
           const cell = $(`.score__table tbody .team-${team} td:nth-child(${n + 2})`)
           cell.find('.current').text(n == 0 ? f.format(e[team]) : i18next.t('units.sqkm', { count: e[team] }))
           cell.find('.diff').text(`(${n == 0 ? df.format(diff) : `${df.format(diff).match(/^[\-+]?/)[0]}${i18next.t('units.sqkm', { count: diff })}`})`)
         }
       })
-      localStorage.setItem('score', JSON.stringify(data))
     }
     function initSettings() {
       if (localStorage.getItem('settings') === null) {
@@ -1940,7 +1990,7 @@ window.onTelegramAuth = async (data) => {
           lang: 'sys', theme: 'auto',
           imghid: false, dsvhid: false,
           arabic: false, selfpos: false,
-          exref: false, base: 'osm',
+          exref: false, base: 'cdb',
           plrhid: false
         }))
       }

@@ -53,8 +53,8 @@
         <div><img src="https://mc.yandex.ru/watch/92026437" style="position:absolute; left:-9999px;" alt="" /></div>
     </noscript>
     <!-- Local -->
-    <script src="script.js" defer></script>
-    <!-- <script class="mobile-check">;(function(){function m(){if('maxTouchPoints' in navigator){return navigator.maxTouchPoints>0}else if('msMaxTouchPoints' in navigator){return navigator.msMaxTouchPoints>0}else if('orientation' in window){return !0}else{return/\b(BlackBerry|webOS|iPhone|IEMobile|Android|Windows Phone|iPad|iPod)\b/i.test(navigator.userAgent)}}const s=document.createElement('script');s.type='module';s.defer=!0;s.src=`/${m()?'script':'intel'}.js`;document.head.append(s);document.querySelector('.mobile-check').remove()})();</script> -->
+    <script
+        class="mobile-check">; (function () { function m() { if ('maxTouchPoints' in navigator) { return navigator.maxTouchPoints > 0 } else if ('msMaxTouchPoints' in navigator) { return navigator.msMaxTouchPoints > 0 } else if ('orientation' in window) { return !0 } else { return /\b(BlackBerry|webOS|iPhone|IEMobile|Android|Windows Phone|iPad|iPod)\b/i.test(navigator.userAgent) } } const s = document.createElement('script'); s.type = 'module'; s.defer = !0; s.src = `/${m() ? 'script' : 'intel'}.js`; document.head.append(s); document.querySelector('.mobile-check').remove() })();</script>
     <link rel="stylesheet" href="/style.css">
 </head>
 
@@ -82,9 +82,10 @@
         </div>
     </div>
 
-    <div class="bottomleft-container">
+    <div class="bottom-container">
         <button id="toggle-follow" data-i18n="menu.follow">menu.follow</button>
         <button id="attack-menu" data-i18n="menu.attack">menu.attack</button>
+        <button id="notifs-menu" data-i18n="menu.notifs">menu.notifs</button>
     </div>
     <button id="layers" data-i18n="menu.layers">menu.layers</button>
     <div class="attack-slider-wrp hidden">
@@ -111,7 +112,7 @@
         </div>
     </div>
 
-    <div class="settings popup hidden">
+    <div class="settings popup pp-center hidden">
         <h3 data-i18n="menu.settings"></h3>
         <div class="settings-content">
             <div class="settings-section">
@@ -172,7 +173,7 @@
         </div>
         <button class="popup-close">[x]</button>
     </div>
-    <div class="layers-config popup hidden">
+    <div class="layers-config popup pp-center hidden">
         <h3 class="layers-config__header" data-i18n="layers.header"></h3>
         <div class="layers-config__list">
             <h4 class="layers-config__subheader" data-i18n="layers.baselayers.header"></h4>
@@ -244,7 +245,7 @@
         </div>
         <button class="popup-close">[x]</button>
     </div>
-    <div class="score popup hidden">
+    <div class="score popup pp-center hidden">
         <h3 class="score__header" data-i18n="score.header"></h3>
         <div class="score__graphs">
             <span>●</span>
@@ -289,7 +290,7 @@
             <span data-i18n="score.timer-decay"></span><span id="timer-decay"></span>
         </div>
     </div>
-    <div class="leaderboard popup hidden">
+    <div class="leaderboard popup pp-center hidden">
         <h3 class="popup-header" data-i18n="leaderboard.header"></h3>
         <ol class="leaderboard__list">
             <li data-i18n="leaderboard.loading"></li>
@@ -298,7 +299,7 @@
         <div class="leaderboard__place"></div>
         <button class="popup-close">[x]</button>
     </div>
-    <div class="inventory popup hidden">
+    <div class="inventory popup pp-center hidden">
         <div class="inventory__manage-amount hidden">
             <div class="inventory__ma-item"></div>
             <div class="inventory__ma-counter">
@@ -313,20 +314,27 @@
             </div>
         </div>
 
-        <button id="inventory__close">X</button>
-        <div class="inventory__tabs">
-            <span class="inventory__tab active" data-tab="1"><span data-i18n="items.types.cores"></span> (<span
-                    class="inventory__tab-counter">0</span>)</span>
-            <span class="inventory__tab" data-tab="2"><span data-i18n="items.types.weapons"></span> (<span
-                    class="inventory__tab-counter">0</span>)</span>
-            <span class="inventory__tab" data-tab="3"><span data-i18n="items.types.references"></span> (<span
-                    class="inventory__tab-counter">0</span>)</span>
+        <div class="inventory__header">
+            <div class="inventory__tabs">
+                <span class="inventory__tab active" data-tab="1"><span data-i18n="items.types.cores"></span> (<span
+                        class="inventory__tab-counter">0</span>)</span>
+                <span class="inventory__tab" data-tab="2"><span data-i18n="items.types.weapons"></span> (<span
+                        class="inventory__tab-counter">0</span>)</span>
+                <span class="inventory__tab" data-tab="3"><span data-i18n="items.types.references"></span> (<span
+                        class="inventory__tab-counter">0</span>)</span>
+            </div>
+            <button id="inventory__close">X</button>
         </div>
         <div class="inventory__content"></div>
         <div class="inventory__controls">
             <button id="inventory-delete-section" data-i18n="buttons.clear"></button>
             <button id="inventory-delete" data-del="0" data-i18n="buttons.select"></button>
         </div>
+    </div>
+    <div class="notifs popup pp-center hidden">
+        <h3 class="popup-header" data-i18n="notifs.header"></h3>
+        <div class="notifs__list"></div>
+        <button class="popup-close">[x]</button>
     </div>
     <div class="profile popup hidden">
         <h3 class="pr-header popup-header">
