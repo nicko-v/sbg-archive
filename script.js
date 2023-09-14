@@ -78,7 +78,6 @@ window.onTelegramAuth = async (data) => {
     for (let j = i; j > 0; j--) obj.total += LevelTargets[j - 1]
     Levels.push(obj)
   }
-
   const ItemTypes = [
     i18next.t('items.unknown'),
     i18next.t('items.types.core'),
@@ -86,7 +85,6 @@ window.onTelegramAuth = async (data) => {
     i18next.t('items.types.reference'),
     i18next.t('items.types.broom'),
   ]
-
   const Cores = [
     { lv: 0, eng: 0, lim: 0 }, { lv: 1, eng: 500, lim: 6 },
     { lv: 2, eng: 750, lim: 6 }, { lv: 3, eng: 1000, lim: 6 },
@@ -114,6 +112,7 @@ window.onTelegramAuth = async (data) => {
   const LightStrokes = ['', '#80F', '#80F', '#F80', '#F80']
 
   const G2T = [[], [1], [2, 4], [3]]
+  const LINES_LIMIT_OUT = 30
 
   jqueryI18next.init(i18next, $, { useOptionsAttr: true })
   $('html').attr('lang', LANG)
@@ -265,7 +264,8 @@ window.onTelegramAuth = async (data) => {
   const map = new ol.Map({
     target: 'map',
     layers: [base_layer, regions_layer, lines_layer, temp_lines_layer, points_layer, player_layer],
-    view
+    view,
+    controls: ol.control.defaults.defaults().extend([new ol.control.ScaleLine()])
   })
   // const ViewOffsets2 = {
   //   _HALF: () => { const val = view.getResolution() * (map.viewport_.clientHeight / 2); console.log(val); return val },
@@ -288,14 +288,22 @@ window.onTelegramAuth = async (data) => {
     }
   })();
 
+  let count_regions = false
   map.on('click', e => {
+    const piv = []
+    const regions = [0, 0, 0]
     map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
-      if (layer.get('name') != 'points') return
-      showInfo(feature.getId())
+      const name = layer.get('name')
+      if (name === 'points') piv.push(feature.getId())
+      if (name === 'regions' && count_regions) regions[feature.getProperties().team - 1]++
     })
-    if (e.originalEvent.altKey) {
-      console.log(...ol.proj.toLonLat(e.coordinate))
-    }
+    if (count_regions) createToast(String.prototype.concat(
+        i18next.t('popups.pick-regions.result'), '<br>',
+        i18next.t('score.red'), `: ${regions[0]}; `,
+        i18next.t('score.green'), `: ${regions[1]}; `,
+        i18next.t('score.blue'), `: ${regions[2]}`
+    ), null, 'top right').showToast()
+    if (piv.length) showInfo(piv[0])
   })
 
   const prev_pos = {
@@ -318,7 +326,7 @@ window.onTelegramAuth = async (data) => {
     prev_pos.zoom = zoom
     requestEntities()
   })
-  setInterval(async () => await requestEntities(), 5 * 60 * 1000)
+  setInterval(requestEntities, 5 * 60 * 1000)
 
   let watcher
   if ('geolocation' in navigator) {
@@ -653,7 +661,7 @@ window.onTelegramAuth = async (data) => {
 
     $('.inventory').removeClass('hidden')
     localStorage.setItem('inventory-cache', JSON.stringify(response.i))
-    const total = response.i.map(m => m.a).reduce((acc, e) => acc += e)
+    const total = response.i.reduce((acc, e) => acc += e.a, 0)
     $('#self-info__inv').text(total)
       .parent().css('color', total >= 3000 ? 'var(--accent)' : '')
     drawInventory()
@@ -736,43 +744,6 @@ window.onTelegramAuth = async (data) => {
         }
       })
     }
-  })
-  $('#inventory-delete-section').on('click', async () => {
-    const selected_items = []
-    $('.inventory__item').each((_, e) => selected_items.push($(e).attr('data-guid')))
-    if (!selected_items.length) {
-      createToast(i18next.t('inventory.clear.none'), $('.inventory')[0], 'bottom left').showToast()
-      return
-    }
-    let proof = confirm(i18next.t('inventory.clear.confirm-1'))
-    if (!proof) return
-    proof = confirm(i18next.t('inventory.clear.confirm-2'))
-    if (!proof) return
-
-    $('#inventory-delete-section').prop('disabled', true)
-    const tab = +$('.inventory__tab.active').attr('data-tab')
-    const { response } = await apiSend('inventory', 'delete', {
-      selection: selected_items,
-      tab
-    }, [$('.inventory')[0], 'bottom left']).catch(({ toast }) => apiCatch(toast))
-    $('#inventory-delete-section').prop('disabled', false)
-    if (!response) return
-
-    let inventory = JSON.parse(localStorage.getItem('inventory-cache')) || []
-    selected_items.forEach(e => {
-      $(`.inventory__item[data-guid="${e}"]`).remove()
-      $(`.splide__slide[data-guid="${e}"]`).remove()
-    })
-    attack_slider.refresh()
-    if (tab == 2 && response.count[tab] == 0)
-      $('.attack-slider-wrp').addClass('hidden')
-    inventory = inventory.filter(f => !selected_items.includes(f.g))
-    localStorage.setItem('inventory-cache', JSON.stringify(inventory))
-    selected_items.splice(0, Infinity)
-
-    $('.inventory__tab.active .inventory__tab-counter').text(response.count[tab])
-    $('#self-info__inv').text(response.count.total)
-      .parent().css('color', response.count.total >= 3000 ? 'var(--accent)' : '')
   })
   $('.inventory__ma-counter button').on('click', e => {
     const input = $('.inventory__ma-amount')
@@ -987,7 +958,7 @@ window.onTelegramAuth = async (data) => {
     localStorage.setItem('inventory-cache', JSON.stringify(inventory))
 
     // показываем анимации и обновляем данные
-    const total = inventory.map(m => m.a).reduce((acc, e) => acc += e)
+    const total = inventory.reduce((acc, e) => acc += e.a, 0)
     $('#self-info__inv').text(total)
       .parent().css('color', total >= 3000 ? 'var(--accent)' : '')
     explodeRange(item.l)
@@ -1047,7 +1018,7 @@ window.onTelegramAuth = async (data) => {
 
     $(`#refs-list .splide__slide.is-active`).remove()
     draw_slider.refresh()
-    if (!$('#refs-list li').length || point_state.lines_count?.o >= 20) closeDrawSlider()
+    if (!$('#refs-list li').length || point_state.lines_count?.o >= LINES_LIMIT_OUT) closeDrawSlider()
 
     const inventory = JSON.parse(localStorage.getItem('inventory-cache')) || []
     if (response.ref.a <= 0) {
@@ -1186,6 +1157,11 @@ window.onTelegramAuth = async (data) => {
     else $('#self-info__coord').parent().addClass('hidden')
     changeSettings('selfpos', state)
   })
+  $('.regions-opacity__range input').on('input', e => {
+    const val = +$(e.target).val()
+    $('#regions-opacity__cur').text(Math.round(val / 15 * 100) + '%')
+    changeSettings('opacity', val)
+  })
   $('#settings-credits').on('click', async e => {
     if ($('.credits').length) return $('.credits').removeClass('hidden')
     $(e.target).prop('disabled', true)
@@ -1243,6 +1219,16 @@ window.onTelegramAuth = async (data) => {
       )
     })
     localStorage.setItem('latest-notif', response.list[0].id)
+  })
+  $('.region-picker').on('click', () => {
+    if (count_regions) {
+      createToast(i18next.t('popups.pick-regions.off'), null, 'top right').showToast()
+      $('.region-picker').removeClass('active')
+    } else {
+      createToast(i18next.t('popups.pick-regions.on'), null, 'top right').showToast()
+      $('.region-picker').addClass('active')
+    }
+    count_regions = !count_regions
   })
 
   $('#logout').on('click', async () => {
@@ -1307,10 +1293,11 @@ window.onTelegramAuth = async (data) => {
     point_state.cores = json.co
     point_state.position = json.c
     point_state.team = json.te
+    point_state.lines_count = json.li
 
     const feature = points_source.getFeatureById(json.g)
     const team_color = `var(--team-${json.te})`
-    const percent_format = new Intl.NumberFormat('ru', { maximumFractionDigits: 1 })
+    const percent_format = new Intl.NumberFormat(LANG, { maximumFractionDigits: 1 })
 
     let eng = 0
     let eng_total = 0
@@ -1332,12 +1319,9 @@ window.onTelegramAuth = async (data) => {
     $('#i-ref').text(i18next.t('info.refs', { count: ref?.a || 0 })).attr('data-has', ref ? 1 : 0)
     $('#i-stat__distance').text(distanceToString(getDistance(json.c)))
     $('#i-stat__owner').text(json.o || i18next.t('info.na')).css('color', team_color).attr('data-name', json.o)
-    $('#i-stat__energy').text(`${percent_format.format(eng / eng_total * 100 || 0)}% @ ${json.co.length}`)
-    if (json.li) {
-      $('#i-stat__line-in').text(json.li.i)
-      $('#i-stat__line-out').text(json.li.o)
-      point_state.lines_count = json.li
-    }
+    $('#i-stat__line-in').text(json.li.i)
+    $('#i-stat__line-out').text(json.li.o)
+    $('#i-stat__region').text(json.r)
     $('#deploy').attr('data-state', 'deploy').text(i18next.t('buttons.deploy'))
     $('.i-stat__cores').empty()
     for (let i = 0; i < 6; i++) {
@@ -1401,7 +1385,7 @@ window.onTelegramAuth = async (data) => {
   }
 
   function updateSelfInfo() {
-    const formatter = new Intl.NumberFormat('ru')
+    const formatter = new Intl.NumberFormat(LANG)
     const explv = Levels[self_data.l - 1]
     $('#self-info__name').text(self_data.n).css('color', `var(--team-${self_data.t})`)
     if (explv.target !== Infinity)
@@ -1427,7 +1411,7 @@ window.onTelegramAuth = async (data) => {
     $('#discover:not(.locked)').prop('disabled', !in_range)
     $('#repair:not(.locked)').prop('disabled', !((in_range || (!in_range && inventory.find(f => f.l === source.g))) && source.te == self_data.t && source.co.some(s => s.e < Cores[s.l].eng)))
     const outbound = source.li?.o || point_state.lines_count?.o || 0
-    $('#draw:not(.locked)').prop('disabled', !(in_range && source.te == self_data.t && source.co.length >= 6 && outbound < 30))
+    $('#draw:not(.locked)').prop('disabled', !(in_range && source.te == self_data.t && source.co.length >= 6 && outbound < LINES_LIMIT_OUT))
   }
   function manageDeploy() {
     if ($('#info').hasClass('hidden')) return
@@ -1623,7 +1607,7 @@ window.onTelegramAuth = async (data) => {
         i18next.t('inventory.reference.info', { owner: data.o ? i18next.t('inventory.reference.owner') : i18next.t('inventory.reference.owner-none') }),
         $('<span>').text(i18next.t('inventory.reference.level', { count: data.l })).css('color', `var(--level-${data.l})`),
         $('<span>', { class: 'profile-link' }).text(data.o).css('color', `var(--team-${data.te})`).attr('data-name', data.o).on('click', openProfile),
-        new Intl.NumberFormat('ru', { maximumFractionDigits: 1 }).format(data.e),
+        new Intl.NumberFormat(LANG, { maximumFractionDigits: 1 }).format(data.e),
         data.co,
         distanceToString(getDistance(data.c))
       )
@@ -1701,7 +1685,7 @@ window.onTelegramAuth = async (data) => {
 
     const level = Levels[response.data.level - 1]
     const team_color = `var(--team-${response.data.team})`
-    const formatter = new Intl.NumberFormat('ru')
+    const formatter = new Intl.NumberFormat(LANG)
     const unit_xp = i18next.t('units.pts-xp')
     $('.profile').removeClass('hidden')
     $('#pr-name').text(response.data.name)
@@ -1756,7 +1740,7 @@ window.onTelegramAuth = async (data) => {
     })
   }
   function formatStatValue(key, value) {
-    const formatter = new Intl.NumberFormat('ru')
+    const formatter = new Intl.NumberFormat(LANG)
     if (key.match(/^guard_/)) return i18next.t('units.n-days', { count: value })
     else if (key.match(/_area$|^max_region$/)) return areaToString(value)
     else if (key == 'max_line') return distanceToString(value)
@@ -1776,7 +1760,7 @@ window.onTelegramAuth = async (data) => {
     $('#leaderboard').prop('disabled', true)
     const stat = $('#leaderboard__term-select').val()
     const unit = units.find(f => f[0].test(stat))?.[1]
-    const formatter = new Intl.NumberFormat('ru')
+    const formatter = new Intl.NumberFormat(LANG)
     const { response } = await apiQuery('leaderboard', { stat }).catch(({ toast }) => apiCatch(toast))
     $('#leaderboard').prop('disabled', false)
     if (!response) return
@@ -1868,7 +1852,7 @@ window.onTelegramAuth = async (data) => {
       feature.setId(e.g)
       feature.setProperties({ team: e.t })
       feature.setStyle(new ol.style.Style({
-        fill: new ol.style.Fill({ color: TeamColors[e.t].stroke + '3' })
+        fill: new ol.style.Fill({ color: TeamColors[e.t].stroke + (getSettings('opacity') || 2).toString(16) })
       }))
       regions_source.addFeature(feature)
     })
@@ -1909,13 +1893,13 @@ window.onTelegramAuth = async (data) => {
     return ol.sphere.getLength(line)
   }
   function distanceToString(distance) {
-    if (distance < 1) return i18next.t('units.cm', { count: distance * 100, lng: 'ru' })
-    else if (distance < 1000) return i18next.t('units.m', { count: distance, lng: 'ru' })
-    else return i18next.t('units.km', { count: distance / 1000, lng: 'ru' })
+    if (distance < 1) return i18next.t('units.cm', { count: distance * 100 })
+    else if (distance < 1000) return i18next.t('units.m', { count: distance })
+    else return i18next.t('units.km', { count: distance / 1000 })
   }
   function areaToString(area) {
-    if (area < 1) return i18next.t('units.sqm', { count: area * 1e6, lng: 'ru' })
-    else return i18next.t('units.sqkm', { count: area, lng: 'ru' })
+    if (area < 1) return i18next.t('units.sqm', { count: area * 1e6 })
+    else return i18next.t('units.sqkm', { count: area })
   }
   // function areaToString(area) {
   //   if (area < 1e-4) return i18next.t('units.ar', { count: area * 1e4 })
@@ -1964,8 +1948,8 @@ window.onTelegramAuth = async (data) => {
     )
   }
   function makeScore(data) {
-    const f = new Intl.NumberFormat('ru', { maximumFractionDigits: 3 })
-    const df = new Intl.NumberFormat('ru', { signDisplay: 'exceptZero' })
+    const f = new Intl.NumberFormat(LANG, { maximumFractionDigits: 3 })
+    const df = new Intl.NumberFormat(LANG, { signDisplay: 'exceptZero' })
     data.score.forEach((e, n) => {
       const { r, g, b } = e
       const is_zero = r + g + b == 0
@@ -1989,7 +1973,7 @@ window.onTelegramAuth = async (data) => {
         imghid: false, dsvhid: false,
         arabic: false, selfpos: false,
         exref: false, base: 'cdb',
-        plrhid: false
+        plrhid: false, opacity: 2
       }))
     }
     const data = JSON.parse(localStorage.getItem('settings'))
@@ -2005,6 +1989,8 @@ window.onTelegramAuth = async (data) => {
     const since = JSON.parse(localStorage.getItem(`i18next_${LANG.slice(0, 2)}-main`)).i18nStamp
     $('.tg-error').remove()
     $('#lang-cache').text(new Date(since).toLocaleString(LANG))
+    $('.regions-opacity__range input').val(data.opacity || 2)
+    $('#regions-opacity__cur').text(Math.round((data.opacity || 2) / 15 * 100) + '%')
     for (const key in data) {
       const target = $(`[data-setting="${key}"]`)
       const val = data[key]
