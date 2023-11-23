@@ -940,12 +940,12 @@ window.onTelegramAuth = async (data) => {
       feature.changed()
     })
     response.l.forEach(e => {
-      const feature = lines_source.getFeatureById(e.guid)
+      const feature = lines_source.getFeatureById(e)
       if (!feature) return
       lines_source.removeFeature(feature)
     })
     response.r.forEach(e => {
-      const feature = regions_source.getFeatureById(e.guid)
+      const feature = regions_source.getFeatureById(e)
       if (!feature) return
       regions_source.removeFeature(feature)
     })
@@ -1459,7 +1459,7 @@ window.onTelegramAuth = async (data) => {
     $('#draw:not(.locked)').prop('disabled', !(in_range && point_state.info.te == self_data.t && point_state.info.co.length >= 6 && outbound < LINES_LIMIT_OUT))
   }
   function manageDeploy() {
-    if ($('#info').hasClass('hidden')) return
+    if ($('.info').hasClass('hidden')) return
     const inventory = JSON.parse(localStorage.getItem('inventory-cache')) || []
     const core = inventory.find(f => f.g == $('#cores-list li').eq(deploy_slider.index).attr('data-guid'))
     const limit = Cores[core?.l]?.lim || 0

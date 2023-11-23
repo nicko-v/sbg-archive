@@ -70,7 +70,7 @@ a:hover, a:active { text-decoration: underline }
   background: #0000;
   z-index: 2;
   display: none;
-  backdrop-filter: blur(4px);
+  /* backdrop-filter: blur(4px); */
 }
 body:has(.popup:not(.hidden)) > .popup-touch {
   display: block;
