@@ -1,3 +1,4 @@
+
 window.onTelegramAuth = async (data) => {
   const request = await fetch('/api/link', {
     method: 'post',
@@ -18,9 +19,6 @@ window.onTelegramAuth = async (data) => {
 }
 
 ;(async function main() {
-  const is_mobile = isMobile()
-  if (!is_mobile) return
-
   const Packages = [
     'jQuery', 'OpenLayers',
     'Splide.js', 'Toastify.js',
@@ -92,12 +90,6 @@ window.onTelegramAuth = async (data) => {
     { lv: 8, eng: 4000, lim: 2 }, { lv: 9, eng: 5250, lim: 1 },
     { lv: 10, eng: 6500, lim: 1 }
   ]
-  const Catalysers = [
-    { lv: 0, range: 0 }, { lv: 1, range: 42 }, { lv: 2, range: 48 },
-    { lv: 3, range: 58 }, { lv: 4, range: 72 }, { lv: 5, range: 90 },
-    { lv: 6, range: 112 }, { lv: 7, range: 138 }, { lv: 8, range: 164 },
-    { lv: 9, range: 186 }, { lv: 10, range: 214 }
-  ]
   const TeamColors = [
     {
       fill: () => is_dark || getSettings('base') == 'goo' ? '#AAAAAA80' : '#44444480',
@@ -115,7 +107,8 @@ window.onTelegramAuth = async (data) => {
   const INVENTORY_LIMIT = 3000
   const COOLDOWN = 90
   const BURNOUT = 3600
-  const SERIES = 5
+
+  $('#attack-menu, .attack-slider-wrp, #deploy, #discover, #draw, .deploy-slider-wrp, .draw-slider-wrp').remove()
 
   jqueryI18next.init(i18next, $, { useOptionsAttr: true })
   $('html').attr('lang', LANG)
@@ -182,9 +175,7 @@ window.onTelegramAuth = async (data) => {
   const points_layer = new ol.layer.Vector({ source: points_source, name: 'points', className: 'ol-layer__points', zIndex: 3 })
 
   const lines_source = new ol.source.Vector()
-  const temp_lines_source = new ol.source.Vector()
   const lines_layer = new ol.layer.Vector({ source: lines_source, name: 'lines', className: 'ol-layer__lines', zIndex: 2 })
-  const temp_lines_layer = new ol.layer.Vector({ source: temp_lines_source, name: 'lines', className: 'ol-layer__lines', zIndex: 2 })
 
   const regions_source = new ol.source.Vector()
   const regions_layer = new ol.layer.Vector({ source: regions_source, name: 'regions', className: 'ol-layer__regions', zIndex: 1 })
@@ -197,7 +188,7 @@ window.onTelegramAuth = async (data) => {
         const [[xc, yc], [xe, ye]] = coords
         const radius = Math.sqrt((xe - xc) ** 2 + (ye - yc) ** 2)
 
-        ctx.lineWidth = is_mobile ? 6 : 2
+        ctx.lineWidth = 2
         ctx.strokeStyle = team == 0 ? TeamColors[0].stroke() : TeamColors[team].stroke
         ctx.fillStyle = team == 0 ? TeamColors[0].fill() : TeamColors[team].fill
         if (energy) {
@@ -223,8 +214,8 @@ window.onTelegramAuth = async (data) => {
 
         const h = JSON.parse(localStorage.getItem('map-config')).h
         if (h == 0) return
-        const offset = is_mobile ? 12 : 4
-        ctx.lineWidth = is_mobile ? 6 : 3
+        const offset = 4
+        ctx.lineWidth = 3
         if (typeof light === 'boolean' && light) {
           ctx.strokeStyle = LightStrokes[h]
           ctx.beginPath()
@@ -268,7 +259,7 @@ window.onTelegramAuth = async (data) => {
   view.setProperties({ offset: [0, ViewOffsets.NORMAL] })
   const map = new ol.Map({
     target: 'map',
-    layers: [base_layer, regions_layer, lines_layer, temp_lines_layer, points_layer, player_layer],
+    layers: [base_layer, regions_layer, lines_layer, points_layer, player_layer],
     view,
     controls: ol.control.defaults.defaults().extend([new ol.control.ScaleLine()])
   })
@@ -278,12 +269,6 @@ window.onTelegramAuth = async (data) => {
     $('.ol-layer__base').attr('data-code', getSettings('base'))
     if (getSettings('plrhid') == true) $('.ol-layer__player').addClass('hidden')
   })
-  // const ViewOffsets2 = {
-  //   _HALF: () => { const val = view.getResolution() * (map.viewport_.clientHeight / 2); console.log(val); return val },
-  //   NORMAL: () => ViewOffsets2._HALF() * 2/3,
-  //   CENTER: () => ViewOffsets2._HALF() * -1/20
-  // }
-  // view.setProperties({ offset: [0, ViewOffsets2.NORMAL()] })
 
   const request_controllers = {
     entities: new AbortController(),
@@ -365,16 +350,9 @@ window.onTelegramAuth = async (data) => {
           text: i18next.t('popups.gps.denied')
         }))
       } else if (error.code == 2) {
-        if (isMobile()) {
-          $('body').empty().css({ display: 'grid' }).append($('<div>', {
-            class: 'fatal-error',
-            text: i18next.t('popups.gps.fail')
-          }))
-        } else {
-          player_source.clear()
-          $('#self-info__coord').parent().remove()
-          $('#toggle-follow').remove()
-        }
+        player_source.clear()
+        $('#self-info__coord').parent().remove()
+        $('#toggle-follow').remove()
       } else {
         const toast = createToast(i18next.t('popups.gps.generic', { code: error.code }))
         toast.options.className = 'error-toast'
@@ -403,55 +381,6 @@ window.onTelegramAuth = async (data) => {
   }
   const popup_toasts = []
 
-  const slider_config = {
-    drag: 'free', snap: true, perPage: 3, pagination: false, wheel: true,
-    direction: 'ltr', height: 100, gap: '.5em', focus: 'center', trimSpace: false
-  }
-  const attack_slider = new Splide('#attack-slider', slider_config)
-  attack_slider.on('click', event => {
-    if (attack_slider.index == event.index) return
-    attack_slider.go(event.index)
-  })
-  attack_slider.on('move drag scroll', () => $('#attack-slider-fire').prop('disabled', true))
-  attack_slider.on('moved dragged scrolled', () => {
-    attack_slider.emit('active', { slide: $(attack_slider.root).find('.splide__slide.is-active') })
-  })
-  attack_slider.on('active', event => {
-    const inventory = JSON.parse(localStorage.getItem('inventory-cache')) || []
-    const catalyser = inventory.find(f => f.g == $(event.slide).attr('data-guid'))
-    const highlevel = catalyser.l > self_data.l
-    $('#attack-slider-fire').prop('disabled', highlevel)
-    $('.attack-slider-highlevel').css('color', highlevel ? '#F00' : '#0000')
-  })
-  attack_slider.mount()
-
-  const deploy_slider = new Splide('#deploy-slider', slider_config)
-  deploy_slider.on('click', event => {
-    if (deploy_slider.index == event.index) return
-    deploy_slider.go(event.index)
-  })
-  deploy_slider.on('move drag scroll', () => $('#deploy').prop('disabled', true))
-  deploy_slider.on('moved dragged scrolled', () => {
-    deploy_slider.emit('active', { slide: $(deploy_slider.root).find('.splide__slide.is-active') })
-  })
-  deploy_slider.on('active', manageDeploy)
-  deploy_slider.mount()
-
-  slider_config.height = 150
-  slider_config.perPage = 3
-  slider_config.gap = '1em'
-  const draw_slider = new Splide('#draw-slider', slider_config)
-  draw_slider.on('click', event => {
-    if (draw_slider.index == event.index) return
-    draw_slider.go(event.index)
-  })
-  draw_slider.on('move drag scroll', () => $('#draw-slider-confirm').prop('disabled', true))
-  draw_slider.on('moved dragged scrolled', () => {
-    draw_slider.emit('active', { slide: $(draw_slider.root).find('.splide__slide.is-active') })
-  })
-  draw_slider.on('active', manageDrawing)
-  draw_slider.mount()
-
   $('#self-info__name').attr('data-name', self_data.n)
   $('.profile-link').on('click', openProfile)
   $('.popup-close').on('click', e => {
@@ -471,145 +400,6 @@ window.onTelegramAuth = async (data) => {
     localStorage.setItem('cooldowns', JSON.stringify(cooldowns))
     localStorage.setItem('refs-cache', JSON.stringify(refs_cache))
   }, 5 * 60e3)
-  $('#discover').on('click', async () => {
-    $('#discover').addClass('locked').prop('disabled', true)
-    const guid = $('.info').attr('data-guid')
-    const { response } = await apiSend('discover', 'post', {
-      position: ol.proj.toLonLat(player_feature.getGeometry().getCoordinates()),
-      guid
-    }, [$('.info')[0], 'top right']).catch(({ toast }) => apiCatch(toast, true))
-    $('#discover').removeClass('locked').prop('disabled', false)
-    if (!response) return
-    const cache = JSON.parse(localStorage.getItem('inventory-cache'))
-    response.loot.forEach(e => {
-      const item = cache.find(f => f.g === e.g)
-      if (!item) cache.push(e)
-      else item.a += e.a
-    })
-    localStorage.setItem('inventory-cache', JSON.stringify(cache))
-
-    const total = cache.map(m => m.a).reduce((acc, e) => acc += e)
-    $('#self-info__inv').text(total)
-      .parent().css('color', total >= INVENTORY_LIMIT ? 'var(--accent)' : '')
-    const ref = cache.find(f => f.t === 3 && f.l === $('.info').attr('data-guid'))
-    $('#i-ref').text(i18next.t('info.refs', { count: ref?.a || 0 })).attr('data-has', ref ? 1 : 0)
-
-    self_data.x = response.xp.cur
-    self_data.l = getLevelByExp(response.xp.cur).lv
-    showExpDiff(response.xp.diff)
-    updateSelfInfo()
-
-    if (!getSettings('dsvhid')) {
-      const toast = createToast('', $('.info')[0], 'top right')
-      if (!response.loot.length) toast.options.text = i18next.t('popups.discovery.none')
-      else toast.options.text = i18next.t('popups.discovery.result', { xp: response.xp.diff, loot: response.loot.map(() => '').join('<br>'), interpolation: { escapeValue: false } })
-      handlePopupToasts(toast)
-      $(toast.toastElement).empty().append(jquerypassargs(
-        $('<div>'),
-        '$1$<br>$2$',
-        $('<span>', { text: i18next.t('popups.discovery.xp', { count: response.xp.diff }) }).css('color', 'var(--progress)'),
-        response.loot.map(m => {
-          const title = makeDropItemTitle(m)
-          if (typeof title === 'string') return `${title} (x${m.a})<br>`
-          else {
-            title.append(` (x${m.a})<br>`)
-            return title
-          }
-        })
-      ))
-    }
-
-    const cooldowns = JSON.parse(localStorage.getItem('cooldowns')) || {}
-    cooldowns[guid] = {
-      t: response.burnout < SERIES ? Date.now() + COOLDOWN * 1000 : response.burnout,
-      c: response.burnout < SERIES ? response.burnout : 0
-    }
-    localStorage.setItem('cooldowns', JSON.stringify(cooldowns))
-    showCooldownTimer(guid)
-
-    if (!$('.attack-slider-wrp').hasClass('hidden')) {
-      $('#catalysers-list').empty()
-      cache.filter(f => G2T[2].includes(f.t)).sort((a, b) => a.t === b.t ? a.l - b.l : a.t - b.t).forEach(e => {
-        const el = $('<li>', { class: 'splide__slide', 'data-guid': e.g })
-        if (e.t > 3) el.attr('data-rarity', e.l)
-        el.append($('<span>', { class: 'catalysers-list__level', text: makeShortItemTitle(e) }).css('color', e.t > 3 ? 'var(--text)' : `var(--level-${e.l})`))
-          .append($('<span>', { class: 'catalysers-list__amount', text: i18next.t('items.amount', { count: e.a }) }))
-        $('#catalysers-list').append(el)
-      })
-      attack_slider.refresh()
-    }
-
-    $('#cores-list').empty()
-    cache.filter(f => f.t === 1).sort((a, b) => a.l - b.l).forEach(e => {
-      $('#cores-list').append($('<li>', { class: 'splide__slide', 'data-guid': e.g })
-        .append($('<span>', { class: 'cores-list__level', text: i18next.t('items.core-short', { level: romanize(e.l) }) }).css('color', `var(--level-${e.l})`))
-        .append($('<span>', { class: 'cores-list__amount', text: i18next.t('items.amount', { count: e.a }) }))
-      )
-    })
-    deploy_slider.refresh()
-  })
-  $('#deploy').on('click', async () => {
-    const state = $('#deploy').attr('data-state')
-    $('#deploy').addClass('locked').prop('disabled', true)
-    const guid = $('#cores-list li').eq(deploy_slider.index).attr('data-guid')
-    let xp
-    if (state === 'deploy') {
-      const { response } = await apiSend('deploy', 'post', {
-        guid: $('.info').attr('data-guid'),
-        core: guid,
-        position: ol.proj.toLonLat(player_feature.getGeometry().getCoordinates())
-      }, [$('.info')[0], 'top right']).catch(({ toast }) => apiCatch(toast, true))
-      $('#deploy').removeClass('locked').prop('disabled', false)
-      if (!response) return
-      showInfo(response.data)
-      xp = response.xp
-    } else if (state === 'upgrade') {
-      const { response } = await apiSend('deploy', 'post', {
-        guid: $('.info').attr('data-guid'),
-        core: guid,
-        slot: $('.i-stat__core.selected').attr('data-guid'),
-        position: ol.proj.toLonLat(player_feature.getGeometry().getCoordinates())
-      }, [$('.info')[0], 'top right']).catch(({ toast }) => apiCatch(toast, true))
-      $('#deploy').removeClass('locked').prop('disabled', false)
-      if (!response) return
-      const core = point_state.info.co.find(f => f.g == response.c.g)
-      core.l = response.c.l
-      core.e = response.c.e
-      core.o = response.c.o
-      $('#i-level').text(`Lv-${response.l}`).css('color', `var(--level-${response.l})`)
-      $(`.i-stat__core[data-guid="${response.c.g}"]`).text(romanize(response.c.l)).css({
-        '--energy': `${response.c.e}%`,
-        '--bgc': `var(--level-${response.c.l})`
-      })
-      const info = $(`.i-stat__core-info[data-guid="${response.c.g}"] span`)
-      info.eq(0).text(`${Math.floor(response.c.e / Cores[response.c.l].eng * 100)}%`).attr('title', `${response.c.e} / ${Cores[response.c.l].eng}`)
-      info.eq(1).text(`${response.c.o}`)
-      xp = response.xp
-    }
-
-    // обновляем инвентарь
-    const inventory = JSON.parse(localStorage.getItem('inventory-cache'))
-    const index = inventory.findIndex(f => f.g == guid)
-    const item = inventory[index]
-    if (--item.a == 0) {
-      inventory.splice(index, 1)
-      $(`#cores-list [data-guid="${guid}"]`).remove()
-    } else {
-      $(`#cores-list [data-guid="${guid}"] .cores-list__amount`).text(`x${item.a}`)
-    }
-    deploy_slider.refresh()
-    localStorage.setItem('inventory-cache', JSON.stringify(inventory))
-    manageDeploy()
-
-    // обновляем данные
-    const total = inventory.map(m => m.a).reduce((acc, e) => acc += e)
-    $('#self-info__inv').text(total)
-      .parent().css('color', total >= INVENTORY_LIMIT ? 'var(--accent)' : '')
-    self_data.x = xp.cur
-    self_data.l = getLevelByExp(xp.cur).lv
-    showExpDiff(xp.diff)
-    updateSelfInfo()
-  })
   $('#repair').on('click', async () => {
     $('#repair').addClass('locked').prop('disabled', true)
     const guid = $('.info').attr('data-guid')
@@ -652,45 +442,6 @@ window.onTelegramAuth = async (data) => {
       feature.changed()
     }
     point_state.info.co = response.data
-  })
-  $('#draw').on('click', async () => {
-    $('#draw').addClass('locked').prop('disabled', true)
-    const guid = $('.info').attr('data-guid')
-    const { response } = await apiQuery('draw', {
-      guid,
-      position: ol.proj.toLonLat(player_feature.getGeometry().getCoordinates()),
-      exref: JSON.parse(localStorage.getItem('settings'))?.exref
-    }, [$('.info')[0], 'top right']).catch(({ toast }) => apiCatch(toast, true))
-    $('#draw').removeClass('locked').prop('disabled', false)
-    view.setProperties({ offset: [0, ViewOffsets.CENTER] })
-    if (!response) return
-    if (!response.data.length) {
-      const toast = createToast(i18next.t('popups.lines-none'), $('.info')[0], 'top right')
-      handlePopupToasts(toast)
-      return
-    }
-    temp_lines_source.clear()
-    point_state.possible_lines = response.data
-    closePopup($('.info'))
-    $('.topleft-container, .bottomleft-container, .ol-attribution').addClass('hidden')
-    $('.draw-slider-wrp').removeClass('hidden').attr({
-      'data-guid': guid,
-      'data-follow': localStorage.getItem('follow') ?? true
-    })
-    localStorage.setItem('follow', false)
-    $('#refs-list').empty()
-    response.data.forEach(e => {
-      $('#refs-list').append($('<li>', { class: 'splide__slide', 'data-ref': e.r, 'data-point': e.p })
-        .append($('<div>', { class: 'refs-list__title', text: e.t }))
-        .append($('<div>', { class: 'refs-list__image' }).append($('<div>').css('background-image', `url(${e.i !== null ? `https://lh3.googleusercontent.com/${e.i}` : '/photos/no_image.png'})`)))
-        .append($('<div>', { class: 'refs-list__info' })
-          .append($('<span>', { class: 'refs-list__distance', text: distanceToString(e.d) }))
-          .append($('<span>', { class: 'refs-list__amount', text: i18next.t('items.amount', { count: e.a }) }))
-        )
-      )
-    })
-    draw_slider.go(0)
-    draw_slider.refresh()
   })
 
   $('#ops').on('click', async () => {
@@ -897,195 +648,6 @@ window.onTelegramAuth = async (data) => {
   })
   $('.outer-link').on('click', confirmOuter)
 
-  $('#attack-menu').on('click', async () => {
-    const inventory = JSON.parse(localStorage.getItem('inventory-cache'))
-    const weapons = inventory.filter(f => G2T[2].includes(f.t)).sort((a, b) => a.t === b.t ? a.l - b.l : a.t - b.t)
-    if (!weapons.length) {
-      const toast = createToast(i18next.t('popups.no-weapons'))
-      toast.showToast()
-      return
-    }
-    $('.attack-slider-wrp').toggleClass('hidden')
-    if ($('.attack-slider-wrp').hasClass('hidden')) {
-      view.setProperties({ offset: [0, ViewOffsets.NORMAL] })
-      movePlayer(ol.proj.toLonLat(player_feature.getGeometry().getCoordinates()))
-      return
-    }
-    $('#catalysers-list').empty()
-    weapons.forEach(e => {
-      const el = $('<li>', { class: 'splide__slide', 'data-guid': e.g })
-      if (e.t > 3) el.attr('data-rarity', e.l)
-      el.append($('<span>', { class: 'catalysers-list__level', text: makeShortItemTitle(e) }).css('color', e.t > 3 ? 'var(--text)' : `var(--level-${e.l})`))
-        .append($('<span>', { class: 'catalysers-list__amount', text: i18next.t('items.amount', { count: e.a }) }))
-      $('#catalysers-list').append(el)
-    })
-    attack_slider.refresh()
-
-    view.setProperties({ offset: [0, ViewOffsets.CENTER] })
-    movePlayer(ol.proj.toLonLat(player_feature.getGeometry().getCoordinates()))
-  })
-  $('#attack-slider-fire').on('click', async () => {
-    $('#attack-slider-fire').prop('disabled', true)
-    const guid = $('#catalysers-list li').eq(attack_slider.index).attr('data-guid')
-    const inventory = JSON.parse(localStorage.getItem('inventory-cache')) || []
-    const { response } = await apiSend('attack2', 'post', {
-      position: ol.proj.toLonLat(player_feature.getGeometry().getCoordinates()),
-      guid
-    }).catch(({ toast }) => apiCatch(toast))
-    $('#attack-slider-fire').prop('disabled', false)
-    if (!response) return
-
-    const index = inventory.findIndex(f => f.g == guid)
-    const item = inventory[index]
-    // вешаем стили на точки
-    response.c.forEach(e => {
-      const feature = points_source.getFeatureById(e.guid)
-      if (!feature) return
-      const pos = feature.getGeometry().getCoordinates()
-      const prop = feature.getProperties()
-      const diff = Math.round((e.energy - prop.energy) * 100)
-      feature.getStyle().push(FeatureStyles.TEXT(diff <= 0 ? `${diff}%` : i18next.t('items.types.core') + '!'))
-
-      if (e.energy <= 0) feature.getStyle()[0] = FeatureStyles.POINT(pos, 0, 0, prop.highlight)
-      else feature.getStyle()[0] = FeatureStyles.POINT(pos, prop.team, e.energy, prop.highlight)
-      feature.setProperties({
-        team: e.energy <= 0 ? 0 : prop.team,
-        energy: e.energy,
-        highlight: e.highlight
-      })
-      feature.changed()
-    })
-    response.l.forEach(e => {
-      const feature = lines_source.getFeatureById(e)
-      if (!feature) return
-      lines_source.removeFeature(feature)
-    })
-    response.r.forEach(e => {
-      const feature = regions_source.getFeatureById(e)
-      if (!feature) return
-      regions_source.removeFeature(feature)
-    })
-    timers.damage_texts.push(setTimeout(() => {
-      response.c.forEach(e => {
-        const feature = points_source.getFeatureById(e.guid)
-        timers.damage_texts.shift()
-        let opacity = 1
-        const timer = setInterval(() => {
-          opacity -= .1
-          const font = feature?.getStyle()[1]?.getText()
-          if (!font) return clearInterval(timer)
-          font.setFill(new ol.style.Fill({ color: `rgba(0, 0, 0, ${opacity})` }))
-          font.setStroke(new ol.style.Stroke({ color: `rgba(255, 255, 255, ${opacity})`, width: 3 }))
-          if (opacity <= 0) {
-            clearInterval(timer)
-            feature.getStyle().splice(1, 1)
-          }
-          feature.changed()
-        }, 50)
-      })
-    }, 2500))
-
-    // обновляем инвентарь
-    if (response.ca != null) {
-      inventory.splice(index, 1)
-      $(`#catalysers-list [data-guid="${guid}"]`).remove()
-    } else {
-      item.a--
-      $(`#catalysers-list [data-guid="${guid}"] .catalysers-list__amount`).text(i18next.t('items.amount', { count: item.a }))
-    }
-    attack_slider.refresh()
-    if (inventory.filter(f => f.t == 2).length == 0)
-      $('.attack-slider-wrp').addClass('hidden')
-    localStorage.setItem('inventory-cache', JSON.stringify(inventory))
-
-    // показываем анимации и обновляем данные
-    const total = inventory.reduce((acc, e) => acc += e.a, 0)
-    $('#self-info__inv').text(total)
-      .parent().css('color', total >= INVENTORY_LIMIT ? 'var(--accent)' : '')
-    explodeRange(item.l)
-    self_data.x = response.xp.cur
-    self_data.l = getLevelByExp(response.xp.cur).lv
-    showExpDiff(response.xp.diff)
-    updateSelfInfo()
-  })
-  $('#draw-slider-confirm').on('click', async () => {
-    $('#draw-slider-confirm').prop('disabled', true)
-    const from = $('.draw-slider-wrp').attr('data-guid')
-    const to = $('#refs-list li').eq(draw_slider.index).attr('data-point')
-    const { response } = await apiSend('draw', 'post', {
-      from, to,
-      position: ol.proj.toLonLat(player_feature.getGeometry().getCoordinates())
-    }).catch(({ toast }) => apiCatch(toast))
-    $('#draw-slider-confirm').prop('disabled', false)
-    if (!response) return
-
-    const arc = turf.greatCircle(...response.line.c, { npoints: 5 })
-    arc.geometry.coordinates = arc.geometry.coordinates.map(m => ol.proj.fromLonLat(m))
-    const format = new ol.format.GeoJSON()
-    const feature = format.readFeature(arc)
-    feature.setId(response.line.g)
-    feature.setProperties({ team: self_data.t })
-    feature.setStyle(new ol.style.Style({
-      stroke: new ol.style.Stroke({ color: TeamColors[self_data.t].stroke, width: 2 })
-    }))
-    lines_source.addFeature(feature)
-
-    if (response.reg.length) {
-      const toast = createToast(i18next.t('popups.new-regions', {
-        count: response.reg.length,
-        area: areaToString(response.reg.reduce((acc, e) => acc += e.a, 0)),
-        max: areaToString(response.reg[0].a)
-      }), null, 'top right')
-      handlePopupToasts(toast)
-
-      response.reg.forEach(e => {
-        const ts = []
-        for (let i = 1; i <= 3; i++)
-          ts.push(turf.greatCircle(e.c[0][i - 1], e.c[0][i], { npoints: 5 }).geometry.coordinates)
-        const n = ts.flat().map(m => ol.proj.fromLonLat(m))
-        n[n.length - 1] = n[0]
-
-        const f = new ol.Feature({ geometry: new ol.geom.Polygon([n]) })
-        f.setId(e.g)
-        f.setProperties({ team: self_data.t })
-        f.setStyle(new ol.style.Style({
-          fill: new ol.style.Fill({ color: TeamColors[self_data.t].stroke + '3' })
-        }))
-        regions_source.addFeature(f)
-      })
-    }
-
-    if (point_state.info?.li?.o) point_state.info.li.o++
-
-    $(`#refs-list .splide__slide.is-active`).remove()
-    draw_slider.refresh()
-    if (!$('#refs-list li').length || point_state.info?.li?.o >= LINES_LIMIT_OUT) closeDrawSlider()
-
-    const inventory = JSON.parse(localStorage.getItem('inventory-cache')) || []
-    if (response.ref.a <= 0) {
-      const index = inventory.findIndex(f => f.g == response.ref.g)
-      inventory.splice(index, 1)
-    } else {
-      const item = inventory.find(f => f.g == response.ref.g)
-      item.a--
-    }
-    localStorage.setItem('inventory-cache', JSON.stringify(inventory))
-    const total = inventory.reduce((acc, e) => acc += e.a, 0)
-    $('#self-info__inv').text(total)
-      .parent().css('color', total >= INVENTORY_LIMIT ? 'var(--accent)' : '')
-
-    self_data.x = response.xp.cur
-    self_data.l = getLevelByExp(response.xp.cur).lv
-    showExpDiff(response.xp.diff)
-    updateSelfInfo()
-  })
-  $('#attack-slider-close').on('click', () => {
-    $('.attack-slider-wrp').addClass('hidden')
-    view.setProperties({ offset: [0, ViewOffsets.NORMAL] })
-    movePlayer(ol.proj.toLonLat(player_feature.getGeometry().getCoordinates()))
-  })
-  $('#draw-slider-close').on('click', closeDrawSlider)
-
   $('#toggle-follow').attr('data-active', localStorage.getItem('follow') != 'false')
   $('#toggle-follow').on('click', e => {
     const active = localStorage.getItem('follow') != 'false'
@@ -1278,49 +840,6 @@ window.onTelegramAuth = async (data) => {
     clearStorage()
     location.href = '/login'
   })
-  ;(function initCompass() {
-    if (!('AbsoluteOrientationSensor' in window)) return console.warn('AOSensor is not supported')
-    if (!('permissions' in navigator)) return console.warn('Permissions API is not available')
-    const sensor = new AbsoluteOrientationSensor({ frequency: 45 })
-    Promise.all([
-      navigator.permissions.query({ name: 'accelerometer' }),
-      navigator.permissions.query({ name: 'magnetometer' }),
-      navigator.permissions.query({ name: 'gyroscope' }),
-    ]).then((results) => {
-      if (!results.every((result) => result.state === 'granted')) {
-        const toast = createToast(i18next.t('popups.compass.rejected'))
-        toast.options.className = 'error-toast'
-        toast.showToast()
-        return
-      }
-      sensor.addEventListener('error', () => {
-        const toast = createToast(i18next.t('popups.compass.unavailable'))
-        toast.options.className = 'error-toast'
-        toast.showToast()
-      })
-      sensor.addEventListener('reading', () => {
-        const angle = Math.round(sensor.quaternion[2] * 180)
-        player_styles[0].getImage().setRotation((-angle * Math.PI / 180) + view.getRotation())
-        player_feature.changed()
-      })
-      sensor.start()
-    }).catch(() => {
-      const toast = createToast(i18next.t('popups.compass.request'))
-      toast.options.className = 'error-toast'
-      toast.showToast()
-    })
-  })();
-  // DEV SPOOFING
-  $('body').on('keydown', event => {
-    const allowed = ['testuser', 'Nerotu']
-    if (!allowed.includes(self_data.n)) return
-    const pos = ol.proj.toLonLat(player_feature.getGeometry().getCoordinates())
-    const accuracy = event.altKey ? 4 : 1
-    if (event.code == 'ArrowDown') { pos[1] -= .00005 / accuracy; movePlayer(pos) }
-    if (event.code == 'ArrowUp') { pos[1] += .00005 / accuracy; movePlayer(pos) }
-    if (event.code == 'ArrowLeft') { pos[0] -= .0001 / accuracy; movePlayer(pos) }
-    if (event.code == 'ArrowRight') { pos[0] += .0001 / accuracy; movePlayer(pos) }
-  })
 
   async function showInfo(data) {
     let json
@@ -1412,38 +931,12 @@ window.onTelegramAuth = async (data) => {
       }
       $('.i-stat__cores').append(...(i % 2 == 0 ? [label, box] : [box, label]))
     }
-    $('.i-stat__core[data-guid]').on('click', e => {
-      const target = $(e.target)
-      if (target.hasClass('selected')) {
-        $('#deploy').attr('data-state', 'deploy').text(i18next.t('buttons.deploy'))
-        target.removeClass('selected')
-        manageDeploy()
-        return
-      }
-      $('.i-stat__core').removeClass('selected')
-      target.addClass('selected')
-      $('#deploy').attr('data-state', 'upgrade').text(i18next.t('buttons.upgrade'))
-      manageDeploy()
-    })
-    manageControls()
-
-    $('#cores-list').empty()
-    inventory.filter(f => f.t == 1).sort((a, b) => a.l - b.l).forEach(e => {
-      $('#cores-list').append($('<li>', { class: 'splide__slide', 'data-guid': e.g })
-        .append($('<span>', { class: 'cores-list__level', text: i18next.t('items.core-short', { level: romanize(e.l) }) }).css('color', `var(--level-${e.l})`))
-        .append($('<span>', { class: 'cores-list__amount', text: i18next.t('items.amount', { count: e.a }) }))
-      )
-    })
-    deploy_slider.refresh()
-    manageDeploy()
-
-    const exists = showCooldownTimer(json.g)
-    if (!exists) $('#discover').removeAttr('data-time').removeClass('locked')
 
     clearInterval(timers.info_controls)
     timers.info_controls = setInterval(() => {
-      manageControls()
-      $('#i-stat__distance').text(distanceToString(getDistance(json.c)))
+      const in_range = isInRange(point_state.info.c)
+      $('#repair:not(.locked)').prop('disabled', !((in_range || (!in_range && inventory.find(f => f.l === point_state.info.g))) && point_state.info.te == self_data.t && point_state.info.co.some(s => s.e < Cores[s.l].eng)))
+      $('#i-stat__distance').text(distanceToString(getDistance(point_state.info.c)))
     }, 100)
   }
 
@@ -1462,7 +955,6 @@ window.onTelegramAuth = async (data) => {
     const pos = ol.proj.fromLonLat(coords)
     player_feature.getGeometry().setCoordinates(pos)
     player_styles.slice(1, 3).forEach(e => e.getGeometry().setCenter(pos))
-    manageDeploy()
 
     ;(function() {
       const follow = localStorage.getItem('follow') === 'true'
@@ -1470,100 +962,6 @@ window.onTelegramAuth = async (data) => {
       if (is_first_watched && (follow && !ignore_follow)) view.setCenter(pos)
       else if (!is_first_watched && (follow || !ignore_follow)) view.setCenter(pos)
     })();
-  }
-  function manageControls() {
-    const inventory = JSON.parse(localStorage.getItem('inventory-cache')) || []
-    const in_range = isInRange(point_state.info.c)
-    $('#discover:not(.locked)').prop('disabled', !in_range)
-    $('#repair:not(.locked)').prop('disabled', !((in_range || (!in_range && inventory.find(f => f.l === point_state.info.g))) && point_state.info.te == self_data.t && point_state.info.co.some(s => s.e < Cores[s.l].eng)))
-    const outbound = point_state.info.li?.o || 0
-    $('#draw:not(.locked)').prop('disabled', !(in_range && point_state.info.te == self_data.t && point_state.info.co.length >= 6 && outbound < LINES_LIMIT_OUT))
-  }
-  function manageDeploy() {
-    if ($('.info').hasClass('hidden')) return
-    const inventory = JSON.parse(localStorage.getItem('inventory-cache')) || []
-    const core = inventory.find(f => f.g == $('#cores-list li').eq(deploy_slider.index).attr('data-guid'))
-    const limit = Cores[core?.l]?.lim || 0
-    const state = $('#deploy').attr('data-state')
-    const errors = ['', i18next.t('popups.no-cores'),
-      i18next.t('popups.point.enemy'),
-      i18next.t('popups.point.range'),
-      i18next.t('popups.point.full-deploy'),
-      i18next.t('popups.highlevel-core'),
-      i18next.t('popups.not-upgrade'),
-      i18next.t('popups.cores-limit', { count: limit })
-    ]
-    let error = 0
-    const info = point_state.info
-    if (inventory.filter(f => f.t == 1).length == 0) error = 1
-    else if (info.te != 0 && info.te != self_data.t) error = 2
-    else if (info.c.length && !isInRange(info.c)) error = 3
-    else if (info.co.length == 6 && state == 'deploy') error = 4
-    else if (core.l > self_data.l) error = 5
-    else if (info.co.find(f => f.g == $('.i-stat__core.selected').attr('data-guid'))?.l >= core.l) error = 6
-    else if (info.co.filter(f => f.o == self_data.n && f.l == core.l).length >= limit) error = 7
-
-    if (error == 1) $('#deploy-slider').addClass('hidden')
-    else if ($('#deploy-slider').hasClass('hidden')) $('#deploy-slider').removeClass('hidden')
-
-    $('#deploy:not(.locked)').prop('disabled', Boolean(error))
-    $('.deploy-slider-error').text(errors[error])
-    .css('color', error ? '#F00' : '#0000')
-  }
-  function showCooldownTimer(guid) {
-    const cooldowns = JSON.parse(localStorage.getItem('cooldowns')) || {}
-    clearInterval(timers.info_cooldown)
-    if (typeof cooldowns[guid] === 'undefined') return false
-    update()
-    timers.info_cooldown = setInterval(update, 1000)
-    return true
-
-    function update() {
-      if (typeof cooldowns[guid] === 'undefined') return clearInterval(timers.info_cooldown)
-      const diff = cooldowns[guid].t - Date.now()
-      if (diff > 0) {
-        $('#discover').attr('data-time', timeToString(Math.round(diff / 1000)))
-        .addClass('locked').prop('disabled', true)
-        if (cooldowns[guid].c > 0) $('#discover').attr('data-remain', cooldowns[guid].c)
-        else $('#discover').removeAttr('data-remain')
-      } else {
-        $('#discover').removeAttr('data-time')
-        .removeAttr('data-remain')
-        .removeClass('locked')
-        delete cooldowns[guid]
-        localStorage.setItem('cooldowns', JSON.stringify(cooldowns))
-        clearInterval(timers.info_cooldown)
-      }
-    }
-  }
-  function manageDrawing(event) {
-    $('#draw-slider-confirm').prop('disabled', false)
-    const data = point_state.possible_lines.find(f => f.r == $(event.slide).attr('data-ref'))
-    const arc = turf.greatCircle(...data.g, { npoints: 5 })
-    arc.geometry.coordinates = arc.geometry.coordinates.map(m => ol.proj.fromLonLat(m))
-    const format = new ol.format.GeoJSON()
-    const feature = format.readFeature(arc)
-    feature.setId(data.r)
-    feature.setProperties({ point: data.p })
-    feature.setStyle(new ol.style.Style({
-      stroke: new ol.style.Stroke({ color: is_dark ? '#FFF' : '#000', width: 2, lineDash: [4] })
-    }))
-    temp_lines_source.clear()
-    temp_lines_source.addFeature(feature)
-
-    const pos = data.g[1].slice()
-    view.setCenter(ol.proj.fromLonLat(pos))
-    // view.adjustCenter(view.getProperties().offset)
-  }
-  function closeDrawSlider() {
-    $('.draw-slider-wrp').addClass('hidden')
-    $('.topleft-container, .bottomleft-container, .ol-attribution').removeClass('hidden')
-    clearInterval(timers.info_controls)
-    temp_lines_source.clear()
-    localStorage.setItem('follow', $('.draw-slider-wrp').attr('data-follow'))
-    view.setProperties({ offset: [0, ViewOffsets.NORMAL] })
-    view.setCenter(player_feature.getGeometry().getCoordinates())
-    // view.adjustCenter(view.getProperties().offset)
   }
   function showExpDiff(diff) {
     if (diff == 0) return
@@ -1930,33 +1328,6 @@ window.onTelegramAuth = async (data) => {
     })
   }
 
-  function explodeRange(level) {
-    return new Promise(res => {
-      clearInterval(timers.attack_ring)
-      const prop = Catalysers[level]
-      const ring = player_styles[2].getGeometry()
-      const stroke = player_styles[2].getStroke()
-      ring.setRadius(0)
-      stroke.setColor(`#F00`)
-      stroke.setWidth(prop.lv)
-      let radius = 0
-      let width = prop.lv
-      timers.attack_ring = setInterval(() => {
-        radius += 1
-        width -= prop.lv / prop.range
-        ring.setRadius(toOLMeters(radius))
-        stroke.setWidth(width)
-        player_feature.changed()
-        if (radius >= prop.range) {
-          clearInterval(timers.attack_ring)
-          stroke.setColor('#0000')
-          player_feature.changed()
-          res(true)
-        }
-      }, 1500 / prop.range)
-    })
-  }
-
   function isInRange(coords) {
     return getDistance(coords) <= 45
   }
@@ -1972,16 +1343,6 @@ window.onTelegramAuth = async (data) => {
   function areaToString(area) {
     if (area < 1) return i18next.t('units.sqm', { count: area * 1e6 })
     else return i18next.t('units.sqkm', { count: area })
-  }
-  // function areaToString(area) {
-  //   if (area < 1e-4) return i18next.t('units.ar', { count: area * 1e4 })
-  //   else if (area < 10) return i18next.t('units.hect', { count: area * 100 })
-  //   else return i18next.t('units.sqkm', { count: area })
-  // }
-  function timeToString(seconds) {
-    if (seconds / 3600 >= 1) return i18next.t('units.hr', { count: Math.floor(seconds / 3600) })
-    else if (seconds / 60 >= 1) return i18next.t('units.min', { count: Math.floor(seconds / 60) })
-    else return i18next.t('units.sec', { count: seconds })
   }
   function timeToHMS(seconds, display_hours = true) {
     const str = [
@@ -2003,21 +1364,6 @@ window.onTelegramAuth = async (data) => {
     if (item.t == 3) return `(x${item.a}) ${item.ti}`
     else if (item.t == 4) return ItemTypes[item.t]
     else return `${ItemTypes[item.t]}-${romanize(item.l)}`
-  }
-  function makeShortItemTitle(item) {
-    if (item.t === 4) return i18next.t('items.broom-short')
-    else if (item.t === 1) return i18next.t('items.core-short', { level: romanize(item.l) })
-    else if (item.t === 2) return i18next.t('items.catalyser-short', { level: romanize(item.l) })
-  }
-  function makeDropItemTitle(item) {
-    if (item.t == 3) return ItemTypes[item.t]
-    else return jquerypassargs(
-      $('<span>'),
-      '$1$ $2$',
-      $('<span>', { class: `item-icon type-${item.t} ${item.t > 3 ? `rarity-${item.l}` : ''}` })
-        .css('background', item.t > 3 ? 'var(--text)' : `var(--level-${item.l})`),
-      makeItemTitle(item)
-    )
   }
   function makeScore(data) {
     const f = new Intl.NumberFormat(LANG, { maximumFractionDigits: 3 })
@@ -2152,12 +1498,6 @@ window.onTelegramAuth = async (data) => {
       full * offset - Math.PI / 2,
       full * offset + full * percent - Math.PI / 2
     ]
-  }
-  function isMobile() {
-    if ('maxTouchPoints' in navigator) return navigator.maxTouchPoints > 0
-    else if ('msMaxTouchPoints' in navigator) return navigator.msMaxTouchPoints > 0
-    else if ('orientation' in window) return true
-    else return /\b(BlackBerry|webOS|iPhone|IEMobile|Android|Windows Phone|iPad|iPod)\b/i.test(navigator.userAgent)
   }
   function getLanguage() {
     return navigator.language
