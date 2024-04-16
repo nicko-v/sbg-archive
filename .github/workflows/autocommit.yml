@@ -1,0 +1,57 @@
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+jobs:
+  main:
+    name: 'Check for code updates'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Curl files
+        run: |
+          curl --remote-name-all https://sbg-game.ru/app/{script.js,intel.js,index.html,style.css}
+
+      - name: Get date
+        id: date
+        uses: Kaven-Universe/github-action-current-date-time@v1
+        with:
+          format: 'YYYY/MM/DD HH:mm'
+          timezone-offset: -180
+
+      - name: Get diff
+        id: diff
+        run: |
+            diff=$(git diff --compact-summary)
+            echo "outputContent<<EOF" >> $GITHUB_OUTPUT
+            echo "$diff" >> $GITHUB_OUTPUT 
+            echo "EOF" >> $GITHUB_OUTPUT
+          
+      - name: Commit and push changes
+        uses: devops-infra/action-commit-push@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          commit_prefix: '[AUTO] '
+          commit_message: '${{ steps.date.outputs.time }} MSK'
+
+      - name: Get commit ID
+        if: steps.diff.outputs.outputContent != ''
+        id: commitID
+        run: |
+            commitID=$(git rev-parse HEAD)
+            echo outputContent=$commitID >> $GITHUB_OUTPUT
+            
+      - name: Get game version
+        if: steps.diff.outputs.outputContent != ''
+        id: gameVersion
+        run: |
+            gameVersion=$(curl -I https://sbg-game.ru/api/self | grep -i ^SBG-Version: | cut -d: -f2- | sed 's/^ *\(.*\).*/\1/')
+            echo outputContent=$gameVersion >> $GITHUB_OUTPUT
+          
+      - name: Telegram notification
+        if: steps.diff.outputs.outputContent != ''
+        run: |
+          curl POST -H 'Content-Type: application/json' -d '{ "chat_id": "${{ secrets.TELEGRAM_CHAT_ID }}", "text": "<b>Изменения в коде:</b> \n<blockquote>${{ steps.diff.outputs.outputContent }}</blockquote>\n\n<b>Версия игры:</b> ${{ steps.gameVersion.outputs.outputContent }}\n\n<a href=\"https://github.com/nicko-v/sbg-archive/commit/${{ steps.commitID.outputs.outputContent }}\">Посмотреть на GitHub</a>", "parse_mode": "HTML" }' 'https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage'
