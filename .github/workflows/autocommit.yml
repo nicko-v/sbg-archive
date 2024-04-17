@@ -19,7 +19,7 @@ jobs:
         id: date
         uses: Kaven-Universe/github-action-current-date-time@v1
         with:
-          format: 'YYYY/MM/DD HH:mm'
+          format: 'YYYY-MM-DD HH:mm'
           timezone-offset: -180
 
       - name: Get diff
@@ -29,20 +29,6 @@ jobs:
             echo "outputContent<<EOF" >> $GITHUB_OUTPUT
             echo "$diff" >> $GITHUB_OUTPUT 
             echo "EOF" >> $GITHUB_OUTPUT
-          
-      - name: Commit and push changes
-        uses: devops-infra/action-commit-push@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          commit_prefix: '[AUTO] '
-          commit_message: '${{ steps.date.outputs.time }} MSK'
-
-      - name: Get commit ID
-        if: steps.diff.outputs.outputContent != ''
-        id: commitID
-        run: |
-            commitID=$(git rev-parse HEAD)
-            echo outputContent=$commitID >> $GITHUB_OUTPUT
             
       - name: Get game version
         if: steps.diff.outputs.outputContent != ''
@@ -50,6 +36,20 @@ jobs:
         run: |
             gameVersion=$(curl -I https://sbg-game.ru/api/self | grep -i ^SBG-Version: | cut -d: -f2- | sed 's/^ *\(.*\).*/\1/')
             echo outputContent=$gameVersion >> $GITHUB_OUTPUT
+          
+      - name: Commit and push changes
+        uses: devops-infra/action-commit-push@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          commit_prefix: '[AUTO] '
+          commit_message: 'v${{ steps.gameVersion.outputs.outputContent }} / ${{ steps.date.outputs.time }} MSK'
+
+      - name: Get commit ID
+        if: steps.diff.outputs.outputContent != ''
+        id: commitID
+        run: |
+            commitID=$(git rev-parse HEAD)
+            echo outputContent=$commitID >> $GITHUB_OUTPUT
           
       - name: Telegram notification
         if: steps.diff.outputs.outputContent != ''
