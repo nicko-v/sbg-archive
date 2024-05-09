@@ -2190,7 +2190,7 @@ window.onTelegramAuth = async (data) => {
         headers: h_obj,
         signal: getAbortSignal(endpoint)
       }).catch(err => {
-        if (err.message?.match('user aborted')) return
+        if (err === '0x00') return console.debug('Previous request was aborted')
         const toast = createToast(i18next.t('popups.network-fail'), ...toast_opts)
         toast.options.className = 'error-toast'
         rej({ error: i18next.t('popups.network-fail'), toast })
