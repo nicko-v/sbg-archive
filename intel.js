@@ -631,7 +631,7 @@ window.onTelegramAuth = async (data) => {
       points: ['captures', 'neutralizes', 'cores_deployed',
       'cores_destroyed', 'owned'],
       drawing: ['lines', 'max_line', 'lines_destroyed', 'regions', 'max_region', 'regions_destroyed'],
-      exploration: ['discoveries', 'unique_visits', 'unique_captures']
+      exploration: ['discoveries', 'unique_visits', 'unique_captures', 'days']
     }
     const container = $('#leaderboard__term-select')
     for (const section in stats) {
@@ -1221,6 +1221,7 @@ window.onTelegramAuth = async (data) => {
       [/^cores_/, 'crs'],
       [/lines?/, 'lns'],
       [/regions/, 'rgs'],
+      [/days/, 'dys']
     ]
 
     $('#leaderboard').prop('disabled', true)

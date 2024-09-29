@@ -1823,7 +1823,7 @@ window.onTelegramAuth = async (data) => {
       [/^cores_/, 'crs'],
       [/lines?/, 'lns'],
       [/regions/, 'rgs'],
-      [/days/, 'days_many']
+      [/days/, 'dys']
     ]
 
     $('#leaderboard').prop('disabled', true)
