@@ -89,8 +89,8 @@ window.onTelegramAuth = async (data) => {
     { lv: 2, eng: 750, lim: 6 }, { lv: 3, eng: 1000, lim: 4 },
     { lv: 4, eng: 1500, lim: 4 }, { lv: 5, eng: 2000, lim: 3 },
     { lv: 6, eng: 2500, lim: 3 }, { lv: 7, eng: 3500, lim: 2 },
-    { lv: 8, eng: 4000, lim: 2 }, { lv: 9, eng: 5250, lim: 1 },
-    { lv: 10, eng: 6500, lim: 1 }
+    { lv: 8, eng: 4000, lim: 2 }, { lv: 9, eng: 5250, lim: 2 },
+    { lv: 10, eng: 6500, lim: 2 }
   ]
   const Catalysers = [
     { lv: 0, range: 0 }, { lv: 1, range: 42 }, { lv: 2, range: 48 },
@@ -111,11 +111,11 @@ window.onTelegramAuth = async (data) => {
   const LightStrokes = ['', '#80F', '#80F', '#F80', '#F80']
 
   const G2T = [[], [1], [2, 4], [3]]
-  const LINES_LIMIT_OUT = 30
+  const LINES_LIMIT_OUT = 45 //30
   const INVENTORY_LIMIT = 3000
-  const COOLDOWN = 90
-  const BURNOUT = 3600
-  const SERIES = 5
+  const COOLDOWN = 45 //90
+  const BURNOUT = 1800 //3600
+  const SERIES = 8 //5
 
   jqueryI18next.init(i18next, $, { useOptionsAttr: true })
   $('html').attr('lang', LANG)
