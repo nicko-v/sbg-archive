@@ -137,13 +137,13 @@ window.onTelegramAuth = async (data) => {
       $('#self-info__inv-lim').text(INVENTORY_LIMIT)
     })
 
-  apiQuery('notifs', { latest: +localStorage.getItem('latest-notif') })
+  apiQuery('notifs', { latest: localStorage.getItem('latest-notif') })
     .catch(({ toast }) => apiCatch(toast))
     .then(({ response }) => {
       if (response.count > 0) $('#notifs-menu').attr('data-count', response.count)
     })
   setInterval(() => {
-    apiQuery('notifs', { latest: +localStorage.getItem('latest-notif') })
+    apiQuery('notifs', { latest: localStorage.getItem('latest-notif') })
     .catch(({ toast }) => apiCatch(toast))
     .then(({ response }) => {
       if (response.count > 0) $('#notifs-menu').attr('data-count', response.count)
@@ -821,7 +821,7 @@ window.onTelegramAuth = async (data) => {
         })
       )
     })
-    localStorage.setItem('latest-notif', response.list[0].id)
+    localStorage.setItem('latest-notif', response.list[0].ti)
   })
   $('.region-picker').on('click', () => {
     if (count_regions) {
