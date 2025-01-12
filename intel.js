@@ -61,7 +61,7 @@ window.onTelegramAuth = async (data) => {
     fallbackLng: META.fallbacks,
     backend: {
       backends: [i18nextLocalStorageBackend, i18nextHttpBackend],
-      backendOptions: [{ prefix: 'i18next_' }, { loadPath: '/i18n/{{lng}}/main.json?_t=1' }]
+      backendOptions: [{ prefix: 'i18next_' }, { loadPath: '/i18n/{{lng}}/main.json' }]
     },
     defaultNs: 'main',
     ns: ['main'],
@@ -115,12 +115,12 @@ window.onTelegramAuth = async (data) => {
   $('body').localize()
   $('title').text(i18next.t('title'))
 
-  let self_data
+  const self_data = {}
   let VERSION
   {
     const { request, response } = await apiQuery('self').catch(({ toast }) => apiCatch(toast))
     if (!response) return
-    self_data = response
+    Object.assign(self_data, response)
     VERSION = request.headers.get('SBG-Version')
   }
 
@@ -137,13 +137,13 @@ window.onTelegramAuth = async (data) => {
       $('#self-info__inv-lim').text(INVENTORY_LIMIT)
     })
 
-  apiQuery('notifs', { latest: localStorage.getItem('latest-notif') })
+  apiQuery('notifs', { latest: localStorage.getItem('latest-notif') ?? 0 })
     .catch(({ toast }) => apiCatch(toast))
     .then(({ response }) => {
       if (response.count > 0) $('#notifs-menu').attr('data-count', response.count)
     })
   setInterval(() => {
-    apiQuery('notifs', { latest: localStorage.getItem('latest-notif') })
+    apiQuery('notifs', { latest: localStorage.getItem('latest-notif') ?? 0 })
     .catch(({ toast }) => apiCatch(toast))
     .then(({ response }) => {
       if (response.count > 0) $('#notifs-menu').attr('data-count', response.count)
