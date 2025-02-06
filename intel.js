@@ -61,7 +61,7 @@ window.onTelegramAuth = async (data) => {
     fallbackLng: META.fallbacks,
     backend: {
       backends: [i18nextLocalStorageBackend, i18nextHttpBackend],
-      backendOptions: [{ prefix: 'i18next_' }, { loadPath: '/i18n/{{lng}}/main.json' }]
+      backendOptions: [{ prefix: 'i18next_' }, { loadPath: './i18n/{{lng}}.json' }]
     },
     defaultNs: 'main',
     ns: ['main'],
