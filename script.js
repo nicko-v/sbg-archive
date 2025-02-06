@@ -1228,7 +1228,8 @@ window.onTelegramAuth = async (data) => {
     $('#notifs-menu').prop('disabled', false).removeAttr('data-count')
     if (typeof response === 'undefined') return
 
-    const latest = +localStorage.getItem('latest-notif')
+    const latest = localStorage.getItem('latest-notif')
+    let found_latest = false
     $('.notifs').removeClass('hidden')
     $('.notifs__list').empty()
     if (!response.list.length) {
@@ -1240,7 +1241,12 @@ window.onTelegramAuth = async (data) => {
     }
     response.list.forEach(entry => {
       const date = new Date(entry.ti)
-      $('.notifs__list').append($('<div>', { class: `notifs__entry ${entry.id == latest ? 'latest' : ''}`, 'data-id': entry.id, 'data-target': entry.g })
+      $('.notifs__list').append(
+        $('<div>', {
+          class: `notifs__entry ${!found_latest && entry.ti === latest ? (found_latest = true, 'latest') : ''}`,
+          'data-id': entry.id,
+          'data-target': entry.g
+        })
         .append($('<span>', { class: 'notifs__entry-stamp' })
           .append($('<span>', { class: 'notifs__entry-time', text: date.toLocaleString(LANG, { hour: '2-digit', minute: '2-digit' }) }))
           .append($('<span>', { class: 'notifs__entry-date', text: date.toLocaleString(LANG, { month: 'short', day: 'numeric' }) }))
