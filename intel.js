@@ -1092,7 +1092,7 @@ window.onTelegramAuth = async (data) => {
         new Intl.NumberFormat(LANG, { maximumFractionDigits: 1 }).format(data.e),
         data.co,
         distanceToString(getDistance(data.c)),
-        i18next.t('inventory.reference.guard', { count: data.gu || -1 })
+        i18next.t('inventory.reference.guard', { count: data.gu ?? -1 })
       )
       target.replaceWith(entry)
       $(e).removeClass('loading').addClass('loaded')
