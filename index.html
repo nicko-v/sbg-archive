@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="color-scheme" content="light dark">
-  <script>if (!localStorage.getItem('auth')) location.href = '/login/';</script>
   <!-- OpenGraph & Favicons -->
   <title>The Simplest Browser Geoloc</title>
   <link rel="manifest" href="/manifest.json">
@@ -185,7 +184,10 @@
         <button class="material-symbols-outlined" id="i-copy-pos">location_on</button>
       </div>
       <div class="i-stat__entry"><span data-i18n="info.distance"></span>: <span id="i-stat__distance">?</span></div>
-      <div class="i-stat__entry"><span data-i18n="info.owner"></span>: <span id="i-stat__owner" class="profile-link" data-i18n="info.na">n/a</span></div>
+      <div class="i-stat__entry">
+        <span data-i18n="info.owner"></span>: <span id="i-stat__owner" class="profile-link" data-i18n="info.na">n/a</span>
+        <span id="i-stat__guard"></span>
+      </div>
       <div class="i-stat__entry"><span data-i18n="info.lines"></span>: <span id="i-stat__line-in">?</span> <span data-i18n="info.lines-in"></span> / <span id="i-stat__line-out">?</span> <span data-i18n="info.lines-out"></span></div>
       <div class="i-stat__entry"><span data-i18n="info.regions"></span>: <span id="i-stat__region">?</span></div>
       <div class="i-buttons">

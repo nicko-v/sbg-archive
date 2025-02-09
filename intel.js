@@ -884,6 +884,16 @@ window.onTelegramAuth = async (data) => {
     $('#i-ref').text(i18next.t('info.refs', { count: ref?.a || 0 })).attr('data-has', ref ? 1 : 0)
     $('#i-stat__distance').text(distanceToString(getDistance(json.c)))
     $('#i-stat__owner').text(json.o || i18next.t('info.na')).css('color', team_color).attr('data-name', json.o)
+    ;(() => {
+      const flag = json.o === self_data.n
+      const target = document.querySelector('#i-stat__guard')
+      if (flag) {
+        target.classList.remove('hidden')
+        target.innerText = i18next.t('info.guard', { count: json.gu })
+        return
+      }
+      target.classList.add('hidden')
+    })()
     if (typeof json.li !== 'undefined') {
       $('#i-stat__line-in').text(json.li.i)
       $('#i-stat__line-out').text(json.li.o)
@@ -1073,14 +1083,16 @@ window.onTelegramAuth = async (data) => {
       })
       $(e).find('.inventory__item-title').css('color', `var(--team-${data.te})`)
       const target = $(e).find('.inventory__item-descr')
+      const message = 'inventory.reference.info' + (data.o === self_data.n ? '-guard' : '')
       const entry = jquerypassargs(
         $('<div>', { class: 'inventory__item-descr' }),
-        i18next.t('inventory.reference.info', { owner: data.o ? i18next.t('inventory.reference.owner') : i18next.t('inventory.reference.owner-none') }),
+        i18next.t(message, { owner: data.o ? i18next.t('inventory.reference.owner') : i18next.t('inventory.reference.owner-none') }),
         $('<span>').text(i18next.t('inventory.reference.level', { count: data.l })).css('color', `var(--level-${data.l})`),
         $('<span>', { class: 'profile-link' }).text(data.o).css('color', `var(--team-${data.te})`).attr('data-name', data.o).on('click', openProfile),
         new Intl.NumberFormat(LANG, { maximumFractionDigits: 1 }).format(data.e),
         data.co,
-        distanceToString(getDistance(data.c))
+        distanceToString(getDistance(data.c)),
+        i18next.t('inventory.reference.guard', { count: data.gu || -1 })
       )
       target.replaceWith(entry)
       $(e).removeClass('loading').addClass('loaded')
